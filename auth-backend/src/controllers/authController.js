@@ -1,8 +1,9 @@
 import { User } from "../models/userModel.js";
 import bcryptjs from 'bcryptjs';
+import crypto from 'crypto';
 import generateVerificationToken from "../utils/generateVerificationToken.js";
 import generateTokenAndSetCookie from "../utils/generateTokenAndSetCookie.js";
-import {sendVerificationEmail, sendWelcomeEmail} from "../config/emails.js"
+import {sendForgotPasswordEmail, sendVerificationEmail, sendWelcomeEmail} from "../config/emails.js"
 
 const login = async (req, res) => {
     const {email, password} = req.body;
@@ -136,4 +137,33 @@ const verifyEmail = async (req, res) => {
     }
 }
 
-export {login, logout, signup, verifyEmail};
+const forgotPassword = async (req, res) => {
+    const {email} = req.body;
+
+    try {
+        const user = await User.findOne({email});
+
+        if(!user){
+            res.status(400).json({ succes: false, message: "Invalid credentials: user not found"});
+        }
+
+        /// Generate reset token
+
+        const resetToken = crypto.randomBytes(20).toString("hex");
+        const resetTokenExpiresAt = Date.now() + 1 * 60 * 60 * 1000; //1hours
+
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordTokenExpiresAt = resetTokenExpiresAt;
+
+        await user.save();
+        await sendForgotPasswordEmail(user.email, `${process.env.CLIENT_URL}/reset-password/${resetToken}`);
+
+        res.status(200).json({ succes: true, message: "Forgot password email was sent succesfully"});
+
+    } catch (error) {
+        console.log("Error in forgot password: " + error);
+        res.status(500).json({succes: false, message: "Server error"});
+    }
+}
+
+export {login, logout, signup, verifyEmail, forgotPassword};
