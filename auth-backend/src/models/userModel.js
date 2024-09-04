@@ -16,11 +16,11 @@ const userSquema = new mongoose.Schema({
     },
     lastLogin: {
         type: Date,
-        default: Date.now
+        default: Date.now,
     },
     isVerified: {
         type: Boolean,
-        default: false
+        default: false,
     },
     resetPasswordToken: String,
     resetPasswordExpiredAt: Date,

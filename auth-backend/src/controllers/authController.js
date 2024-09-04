@@ -5,11 +5,54 @@ import generateTokenAndSetCookie from "../utils/generateTokenAndSetCookie.js";
 import {sendVerificationEmail, sendWelcomeEmail} from "../config/emails.js"
 
 const login = async (req, res) => {
+    const {email, password} = req.body;
+
+    try {
+        const user = await User.findOne({email});
+        if(!user){
+            res.status(400).json({ succes: false,message: "Invalid credentials"});
+        }
+
+        const isPasswordValid = await bcryptjs.compare(password, user.password);
+
+        if(!isPasswordValid){
+            res.status(400).json({
+                succes: false,
+                message: "Invalid credentials"
+            });
+        }
+
+        generateTokenAndSetCookie(res, user._id);
+        user.lastLogin = new Date();
+        await user.save();
+
+        res.status(200).json({
+            succes: true,
+            message: "Logged in successfully",
+            user: {
+                ...user._doc,
+                password: undefined,
+            }
+        });
+    } catch (error) {
+        console.log("Error in login function: " + error);
+        res.status(400).json({
+            succes: false,
+            message: "Error server: " + error, 
+        })
+    }
+
+    
+
     
 }
 
 const logout = async (req, res) => {
-    
+    res.clearCookie("token");
+    res.status(200).json({
+        succes: true,
+        message: "Logged out successfully",
+    })
 }
 
 const signup = async (req, res) => {
@@ -58,7 +101,7 @@ const signup = async (req, res) => {
     }
 };
 
-const verifyEmail = async (req, res) => {
+const verifyEmail = async (req, res) => { 
     const {code} = req.body;
 
     try {
@@ -88,7 +131,8 @@ const verifyEmail = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(400).json({succes: false, message: error.message});
+        console.log("Error occur: " + error);
+        res.status(500).json({succes: false, message: "Server error"});
     }
 }
 
