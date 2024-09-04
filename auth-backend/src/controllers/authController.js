@@ -3,7 +3,7 @@ import bcryptjs from 'bcryptjs';
 import crypto from 'crypto';
 import generateVerificationToken from "../utils/generateVerificationToken.js";
 import generateTokenAndSetCookie from "../utils/generateTokenAndSetCookie.js";
-import {sendForgotPasswordEmail, sendVerificationEmail, sendWelcomeEmail} from "../config/emails.js"
+import {sendForgotPasswordEmail, sendVerificationEmail, sendWelcomeEmail, sendResetSuccesEmail} from "../config/emails.js"
 
 const login = async (req, res) => {
     const {email, password} = req.body;
@@ -153,7 +153,7 @@ const forgotPassword = async (req, res) => {
         const resetTokenExpiresAt = Date.now() + 1 * 60 * 60 * 1000; //1hours
 
         user.resetPasswordToken = resetToken;
-        user.resetPasswordTokenExpiresAt = resetTokenExpiresAt;
+        user.resetPasswordExpiredAt = resetTokenExpiresAt;
 
         await user.save();
         await sendForgotPasswordEmail(user.email, `${process.env.CLIENT_URL}/reset-password/${resetToken}`);
@@ -166,4 +166,38 @@ const forgotPassword = async (req, res) => {
     }
 }
 
-export {login, logout, signup, verifyEmail, forgotPassword};
+const resetPassword = async (req, res) => {
+    try {
+        const {token} = req.params;
+        const {password} = req.body;
+
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpiredAt: { $gt: Date.now() },
+        });
+
+        console.log(user)
+
+        if(!user){
+            res.status(400).json({ succes: false, message: "Invalid or expired reset token"});
+        }
+
+        const hashedPassword = await bcryptjs.hash(password, 10);
+
+        user.password = hashedPassword;
+        user.resetPasswordExpiredAt = undefined;
+        user.resetPasswordToken = undefined;
+
+        await user.save();
+
+        await sendResetSuccesEmail(user.email);
+
+        res.status(200).json({ succes: true, message: "Password was reset succesfully"});
+
+    } catch (error) {
+        console.log('Error sending Succes reset password email: ' + error);
+        throw new Error('Error sending Succes reset password email: ' + error);
+    }
+}
+
+export {login, logout, signup, verifyEmail, forgotPassword, resetPassword};
