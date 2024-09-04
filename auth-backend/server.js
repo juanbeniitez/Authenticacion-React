@@ -21,6 +21,10 @@ app.use('/api/auth', authRoute);
 // Define port
 const port = process.env.PORT || 4000;
 
+app.get('/', (req, res) => {
+    res.json({succes: true, message: "Ok"});
+})
+
 
 const server = app.listen(port, (req, res) => {
     console.log("Listen in port http://localhost:4000");
