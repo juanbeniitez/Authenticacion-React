@@ -13,7 +13,26 @@ connectDB();
 
 // CORS
 app.disable("x-powered-by")
-app.use(cors());
+app.use(cors({
+    origin: (origin, callback) => {
+
+        const ACCPTED_ORIGINS = [
+            "http://localhost:8080",
+            "http://localhost:5173",
+            "https://movies.com",
+        ]
+
+        if(ACCPTED_ORIGINS.includes(origin)){
+            return callback(null, true)
+        }
+
+        if(!origin){
+            return callback(null, true)
+        }
+
+        return callback(new Error('Nor allowed by CORS'))
+    }
+}));
 
 app.use(express.json()); // Nos permite parsear las reqest como un json con req.body
 app.use(cookieParser()); // Nos permite

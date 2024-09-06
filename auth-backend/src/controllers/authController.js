@@ -125,7 +125,7 @@ const verifyEmail = async (req, res) => {
         res.status(200).json({
             succes: true,
             message: "Email verified succesfully",
-            use:{
+            user:{
                 ...user._doc,
                 password: undefined,
             },
